@@ -24,7 +24,7 @@ public class NashornCallTypesBenchmark {
 
         engine.eval(code);
         Invocable inv = (Invocable) engine;
-        JSObject star = (JSObject) engine.get("star");
+        JSObject propertiesDict = (JSObject) engine.get("properties");
 
         Object result = null;
         Object property;
@@ -32,7 +32,7 @@ public class NashornCallTypesBenchmark {
         for (int i = 0; i < RUNS; ++i) {
             long start = System.nanoTime();
             for (int j = 0; j < BATCH; ++j) {
-                property = star.getMember("ssn");
+                property = propertiesDict.getMember("ssn");
                 result = inv.invokeMethod(property, "clean", "12345678");
 
             }
@@ -70,11 +70,11 @@ public class NashornCallTypesBenchmark {
 
     public static void main(String[] args) {
         try {
-            String universeCode = readFile("scripts/universe.js");
+            String universeCode = readFile("scripts/oneBigScript.js");
             System.out.println("== Nashorn invokeMethod ==");
             nashornInvokeMethod(universeCode);
             System.out.println("== Nashorn CompiledScript ==");
-            nashornCompiledScript(readFile("scripts/compiledScript.js"));
+            nashornCompiledScript(readFile("scripts/smallSnippet.js"));
             System.out.println();
         } catch (Exception e) {
             e.printStackTrace();
