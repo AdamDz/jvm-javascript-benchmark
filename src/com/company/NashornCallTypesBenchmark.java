@@ -1,6 +1,7 @@
 package com.company;
 
 import jdk.nashorn.api.scripting.JSObject;
+import jdk.nashorn.api.scripting.ScriptObjectMirror;
 
 import javax.script.*;
 import java.io.FileNotFoundException;
@@ -34,10 +35,9 @@ public class NashornCallTypesBenchmark {
             for (int j = 0; j < BATCH; ++j) {
                 property = propertiesDict.getMember("ssn");
                 result = inv.invokeMethod(property, "clean", "12345678");
-
             }
             long stop = System.nanoTime();
-            System.out.println("Run #" + (i + 1) + ": " + Math.round((stop - start)/BATCH/1000) + " us");
+            System.out.println("Run " + (i*BATCH+1) + "-" + ((i+1)*BATCH) +": " + Math.round((stop - start)/BATCH/1000) + " us");
             total += (stop - start);
         }
         System.out.println("Average run: " + Math.round(total/RUNS/BATCH/1000) + " us");
@@ -61,20 +61,50 @@ public class NashornCallTypesBenchmark {
                 result = compiled.eval(context);
             }
             long stop = System.nanoTime();
-            System.out.println("Run #" + (i + 1) + ": " + Math.round((stop - start)/BATCH/1000) + " us");
+            System.out.println("Run " + (i*BATCH+1) + "-" + ((i+1)*BATCH) +": " + Math.round((stop - start)/BATCH/1000) + " us");
             total += (stop - start);
         }
+
         System.out.println("Average run: " + Math.round(total/RUNS/BATCH/1000) + " us");
         System.out.println("Data is " + ((Invocable) engine).invokeMethod(result, "toString").toString());
     }
 
+    static void nashornCompiledScriptReturningFunction(String code, String library) throws ScriptException, NoSuchMethodException {
+        ScriptEngineManager factory = new ScriptEngineManager();
+        ScriptEngine engine = factory.getEngineByName("nashorn");
+
+        ScriptContext libraryContext = new SimpleScriptContext();
+        ScriptContext privateContext = new SimpleScriptContext();
+
+        ScriptObjectMirror errorFunc = (ScriptObjectMirror)((Compilable) engine).compile(library).eval(libraryContext);
+        ScriptObjectMirror func = (ScriptObjectMirror)((Compilable) engine).compile(code).eval(privateContext);
+        Object result = null;
+
+        long total = 0;
+        for (int i = 0; i < RUNS; ++i) {
+            long start = System.nanoTime();
+            for (int j = 0; j < BATCH; ++j) {
+                result = func.call(null, "12345678", errorFunc);
+            }
+            long stop = System.nanoTime();
+            System.out.println("Run " + (i*BATCH+1) + "-" + ((i+1)*BATCH) +": " + Math.round((stop - start)/BATCH/1000) + " us");
+            total += (stop - start);
+        }
+
+        System.out.println("Average run: " + Math.round(total/RUNS/BATCH/1000) + " us");
+        System.out.println("Data is " + result.toString());
+    }
+
     public static void main(String[] args) {
         try {
-            String universeCode = readFile("scripts/oneBigScript.js");
+            String libraryCode = readFile("scripts/library.js");
+            String bigScriptCode = readFile("scripts/oneBigScript.js");
             System.out.println("== Nashorn invokeMethod ==");
-            nashornInvokeMethod(universeCode);
+            nashornInvokeMethod(bigScriptCode);
             System.out.println("== Nashorn CompiledScript ==");
             nashornCompiledScript(readFile("scripts/smallSnippet.js"));
+            System.out.println("== Nashorn CompiledScript returning a function ==");
+            nashornCompiledScriptReturningFunction(readFile("scripts/functionSnippet.js"), libraryCode);
             System.out.println();
         } catch (Exception e) {
             e.printStackTrace();
